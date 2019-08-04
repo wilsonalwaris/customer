@@ -1,6 +1,5 @@
 ﻿using Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers
 {
@@ -8,25 +7,32 @@ namespace Api.Controllers
     [ApiController]
     public class CustomerController : ControllerBase
     {
-        private DbContextOptions<CustomerContext> DbOptions;
-        private CustomerRepository customerRepository;
+        private ICustomerRepository customerRepository;
 
-        public CustomerController()
+        public CustomerController(ICustomerRepository customerRepository)
         {
-            this.DbOptions = SqliteHelper.GetDatabaseOptions();
+            this.customerRepository = customerRepository;
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Customer> GetCustomer(int id)
+        public ActionResult<Customer> Get(int id)
         {
-            Customer customer = new Customer();
-            using (var customerContext = new CustomerContext(this.DbOptions))
+            return this.customerRepository.GetCustomer(id);
+        }
+
+        [HttpPost]
+        public void Add(Customer customer)
+        {
+            if (customer != null)
             {
-                var customerRepository = new CustomerRepository(customerContext);
-                customer = customerRepository.GetCustomer(id);
+                this.customerRepository.AddCustomer(customer);
             }
-            
-            return customer;
+        }
+
+        [HttpDelete("{id}")]
+        public void Delete(int id)
+        {
+
         }
     }
 }

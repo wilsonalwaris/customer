@@ -1,29 +1,31 @@
 using Data;
-using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
+using System;
 
 namespace Tests
 {
     [TestFixture]
-    public class CusotmerRespositoryTests
+    public class CusotmerRespositoryTests : IDisposable
     {
-        private DbContextOptions<CustomerContext> testDbOptions;
-        private CustomerRepository customerRepository;
+        private ICustomerRepository customerRepository;
+        private ICustomerRepositoryHelper customerRepositoryHelper;
+        private IDatabaseHelper databaseHelper;
+        private CustomerContext customerContext;
 
         [SetUp]
         public void Setup()
         {
-            this.testDbOptions = SqliteHelper.GetInMemoryDatabaseOptions();
+            this.databaseHelper = new DatabaseHelper();
+            this.customerRepositoryHelper = new CustomerRepositoryHelper();
+            this.customerContext = new CustomerContext(this.databaseHelper.GetDatabaseOptions());
+            this.customerRepository = new CustomerRepository(this.customerContext, this.customerRepositoryHelper);
         }
 
         [Test]
         public void CheckIfDatabaseExistsTest()
         {
             // assert
-            using (var customerContext = new CustomerContext(this.testDbOptions))
-            {
-                Assert.IsFalse(SqliteHelper.DatabaseDoesNotExist(customerContext));
-            }
+            Assert.IsFalse(this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext));
         }
 
         [Test]
@@ -40,34 +42,20 @@ namespace Tests
             };
 
             // act
-            var customerRetrivedFromDb = new Customer();
-            using (var customerContext = new CustomerContext(this.testDbOptions))
+            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext))
             {
-                if (SqliteHelper.InMemoryDatabaseDoesNotExist(customerContext))
-                {
-                    Assert.Fail();
-                }
-
-                // add
-                this.customerRepository = new CustomerRepository(customerContext);
-                this.customerRepository.AddCustomer(customerToBeAddedToDb);
-                this.customerRepository.SaveChanges();
-
-                // retrieve
-                customerRetrivedFromDb = this.customerRepository.GetCustomer(customerToBeAddedToDb.Id);
+                Assert.Fail();
             }
+            this.customerRepository.AddCustomer(customerToBeAddedToDb);
+            var customerRetrivedFromDb = this.customerRepository.GetCustomer(customerToBeAddedToDb.Id);
 
             // assert
-            Assert.AreEqual(customerToBeAddedToDb, customerRetrivedFromDb);
+            Assert.AreEqual(customerToBeAddedToDb.Id, customerRetrivedFromDb.Id);
         }
 
-        [TearDown]
-        public void TearDown()
+        public void Dispose()
         {
-            using (var customerContext = new CustomerContext(this.testDbOptions))
-            {
-                customerContext.Database.EnsureDeleted();
-            }
+            this.customerContext = null;
         }
     }
 }

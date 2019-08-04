@@ -1,59 +1,64 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Data
 {
-    public class CustomerRepository : IDisposable
+    public class CustomerRepository : ICustomerRepository
     {
         private CustomerContext customerContext;
+        private readonly ICustomerRepositoryHelper customerRepositoryHelper;
 
-        public CustomerRepository(CustomerContext customerContext)
+        public CustomerRepository(
+            CustomerContext customerContext,
+            ICustomerRepositoryHelper customerRepositoryHelper)
         {
             this.customerContext = customerContext;
+            this.customerRepositoryHelper = customerRepositoryHelper;
         }
 
-        public void AddCustomer(Customer customer)
+        public bool AddCustomer(Customer customer)
         {
-            try
+            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext) || customer == null)
             {
-                if (customer == null)
-                {
-                    return;
-                }
+                return false;
+            }
 
-                this.customerContext.Customer.Add(customer);
-            }
-            catch (Exception ex)
+            if (!this.customerContext.Customer.Contains(customer))
             {
-                throw ex;
+                this.customerContext.Customer.Add(customer);
+                this.SaveChanges();
             }
+            
+            return true;
         }
 
         public Customer GetCustomer(int customerId)
         {
-            return this.customerContext.Customer.FirstOrDefault(cust => cust.Id == customerId);
+            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext))
+            {
+                return null;
+            }
+
+            if (this.customerContext.Customer == null || !this.customerContext.Customer.Any())
+            {
+                return null;
+            }
+
+            return this.customerContext.Customer.First(cust => cust.Id == customerId);
         }
 
-        public bool SaveChanges()
+        private bool SaveChanges()
         {
-            try
-            {
-                return this.customerContext.SaveChanges() > 0;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
+           return this.customerContext.SaveChanges() > 0;
         }
 
         public void Dispose()
         {
-            if (this.customerContext == null)
+            if (this.customerContext != null)
             {
-                return;
+                this.customerContext = null;
             }
-
-            this.customerContext = null;
         }
     }
 }

@@ -1,30 +1,38 @@
 using Api;
-using Api.Tests2;
+using Api.Tests;
 using Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using NUnit.Framework;
+using System;
 using System.Threading.Tasks;
 
 namespace Tests
 {
-    public class CustomerControllerTests
+    public class CustomerControllerTests : IDisposable
     {
         private WebApplicationFactory<Startup> webApplicationFactory;
-        private CustomerRepository customerRepository;
-        private DbContextOptions<CustomerContext> testDbOptions;
+        private ICustomerRepository customerRepository;
+        private DbContextOptions<CustomerContext> dbOptions;
+        private CustomerContext customerContext;
+        private ICustomerRepositoryHelper customerRepositoryHelper;
+        private IDatabaseHelper databaseHelper;
 
         [SetUp]
         public void Setup()
         {
             this.webApplicationFactory = new ApiWebApplicationFactory();
-            this.testDbOptions = SqliteHelper.GetDatabaseOptions();
+            this.customerRepositoryHelper = new CustomerRepositoryHelper();
+            this.databaseHelper = new DatabaseHelper();
+
+            this.dbOptions = this.databaseHelper.GetDatabaseOptions();
         }
 
         [Test]
         public async Task GetCustomerTest()
         {
-            // arrange
+            // arrange 
             var client = this.webApplicationFactory.CreateClient();
             var customerToBeAddedToDb = new Customer
             {
@@ -35,23 +43,21 @@ namespace Tests
                 Password = "********"
             };
 
-            using (var customerContext = new CustomerContext(this.testDbOptions))
-            {
-                if (SqliteHelper.DatabaseDoesNotExist(customerContext))
-                {
-                    Assert.Fail();
-                }
-
-                this.customerRepository = new CustomerRepository(customerContext);
-                this.customerRepository.AddCustomer(customerToBeAddedToDb);
-                this.customerRepository.SaveChanges();
-            }
+            this.customerContext = new CustomerContext(this.dbOptions);
+            this.customerRepository = new CustomerRepository(this.customerContext, this.customerRepositoryHelper);
+            this.customerRepository.AddCustomer(customerToBeAddedToDb);
 
             // Act 
             var response = await client.GetAsync("/api/customer/1");
+            var customerRetrievedFromDb = JsonConvert.DeserializeObject<Customer>(await response.Content.ReadAsStringAsync());
 
             // Assert
-            Assert.True(response.IsSuccessStatusCode);
+            Assert.AreEqual(customerToBeAddedToDb.Id, customerRetrievedFromDb.Id);
+        }
+
+        public void Dispose()
+        {
+            this.customerContext = null;
         }
     }
 }

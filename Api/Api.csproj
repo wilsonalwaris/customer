@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="DataDirectory\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
@@ -12,9 +13,11 @@
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.2.5" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.2.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.0.0-rc2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Api.Register\Api.Register.csproj" />
     <ProjectReference Include="..\Data\Data.csproj" />
   </ItemGroup>
 

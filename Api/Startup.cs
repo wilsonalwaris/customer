@@ -9,6 +9,8 @@ namespace Api
 {
     public class Startup
     {
+        private readonly IDependencyRegister dependencyRegister;
+
         public Startup(IConfiguration configuration)
         {
             this.Configuration = configuration;
@@ -16,8 +18,6 @@ namespace Api
         }
 
         public IConfiguration Configuration { get; }
-
-        private readonly IDependencyRegister dependencyRegister;
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -56,6 +56,11 @@ namespace Api
                 setupAction.RoutePrefix = string.Empty;
             });
             app.UseMvc();
+
+            app.Run(async context => 
+            {
+                context.Response.Redirect("/index.html");
+            });
         }
     }
 }

@@ -1,38 +1,30 @@
 using Data;
+using Moq;
 using NUnit.Framework;
 using System;
 
 namespace Tests
 {
     [TestFixture]
-    public class CusotmerRespositoryTests : IDisposable
+    public partial class CusotmerRespositoryTests : IDisposable
     {
         private ICustomerRepository customerRepository;
         private ICustomerRepositoryHelper customerRepositoryHelper;
+        private Mock<ICustomerRepositoryHelper> customerRepositoryHelperMock;
         private IDatabaseHelper databaseHelper;
         private CustomerContext customerContext;
+        private Customer customerToBeAdded;
 
         [SetUp]
         public void Setup()
         {
             this.databaseHelper = new DatabaseHelper();
             this.customerRepositoryHelper = new CustomerRepositoryHelper();
+            this.customerRepositoryHelperMock = new Mock<ICustomerRepositoryHelper>();
+
             this.customerContext = new CustomerContext(this.databaseHelper.GetDatabaseOptions());
             this.customerRepository = new CustomerRepository(this.customerContext, this.customerRepositoryHelper);
-        }
-
-        [Test]
-        public void CheckIfDatabaseExistsTest()
-        {
-            // assert
-            Assert.IsFalse(this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext));
-        }
-
-        [Test]
-        public void CreateCustomerTest()
-        {
-            // arrange
-            var customerToBeAddedToDb = new Customer
+            this.customerToBeAdded= new Customer
             {
                 Id = 1,
                 FirstName = "Jane",
@@ -40,17 +32,13 @@ namespace Tests
                 EmailAddress = "janedoe@jd.com",
                 Password = "********"
             };
+        }
 
-            // act
-            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext))
-            {
-                Assert.Fail();
-            }
-            this.customerRepository.AddCustomer(customerToBeAddedToDb);
-            var customerRetrivedFromDb = this.customerRepository.GetCustomer(customerToBeAddedToDb.Id);
-
+        [Test]
+        public void CheckIfDatabaseExistsTest()
+        {
             // assert
-            Assert.AreEqual(customerToBeAddedToDb.Id, customerRetrivedFromDb.Id);
+            Assert.IsFalse(this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext));
         }
 
         public void Dispose()

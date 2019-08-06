@@ -32,7 +32,7 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
-
+           this.customerRepository.DeleteCustomer(id);
         }
     }
 }

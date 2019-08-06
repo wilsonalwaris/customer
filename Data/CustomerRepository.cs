@@ -24,12 +24,13 @@ namespace Data
                 return false;
             }
 
-            if (!this.customerContext.Customer.Contains(customer))
+            if (this.customerContext.Customer.Contains(customer))
             {
-                this.customerContext.Customer.Add(customer);
-                this.SaveChanges();
+                return true;
             }
-            
+
+            this.customerContext.Customer.Add(customer);
+            this.SaveChanges();
             return true;
         }
 
@@ -40,12 +41,36 @@ namespace Data
                 return null;
             }
 
-            if (this.customerContext.Customer == null || !this.customerContext.Customer.Any())
+            return this.customerContext.Customer.First(cust => cust.Id == customerId);
+        }
+
+        public bool DeleteCustomer(int customerId)
+        {
+            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext))
             {
-                return null;
+                return false;
             }
 
-            return this.customerContext.Customer.First(cust => cust.Id == customerId);
+
+            if (!this.customerContext.Customer.Any(customer => customer.Id == customerId))
+            {
+                return false;
+            }
+
+            var customerToDelete = this.customerContext.Customer.First(customer => customer.Id == customerId);
+            this.customerContext.Customer.Remove(customerToDelete);
+            this.SaveChanges();
+            return true;
+        }
+
+        public bool ContainsCustomer(Customer customer)
+        {
+            if (this.customerRepositoryHelper.DatabaseDoesNotExist(this.customerContext) || customer == null)
+            {
+                return false;
+            }
+
+            return this.customerContext.Customer.Contains(customer);
         }
 
         private bool SaveChanges()

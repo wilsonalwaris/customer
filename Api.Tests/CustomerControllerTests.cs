@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Tests
@@ -18,6 +19,8 @@ namespace Tests
         private CustomerContext customerContext;
         private ICustomerRepositoryHelper customerRepositoryHelper;
         private IDatabaseHelper databaseHelper;
+        private HttpClient httpClient;
+        private Customer customerToBeAdded;
 
         [SetUp]
         public void Setup()
@@ -27,14 +30,12 @@ namespace Tests
             this.databaseHelper = new DatabaseHelper();
 
             this.dbOptions = this.databaseHelper.GetDatabaseOptions();
-        }
+            this.httpClient = this.webApplicationFactory.CreateClient();
 
-        [Test]
-        public async Task GetCustomerTest()
-        {
-            // arrange 
-            var client = this.webApplicationFactory.CreateClient();
-            var customerToBeAddedToDb = new Customer
+            this.customerContext = new CustomerContext(this.dbOptions);
+            this.customerRepository = new CustomerRepository(this.customerContext, this.customerRepositoryHelper);
+
+            this.customerToBeAdded = new Customer
             {
                 Id = 1,
                 FirstName = "Jane",
@@ -42,17 +43,43 @@ namespace Tests
                 EmailAddress = "janedoe@jd.com",
                 Password = "********"
             };
+        }
 
-            this.customerContext = new CustomerContext(this.dbOptions);
-            this.customerRepository = new CustomerRepository(this.customerContext, this.customerRepositoryHelper);
-            this.customerRepository.AddCustomer(customerToBeAddedToDb);
+        [Test]
+        public async Task AddCustomerTest()
+        {
+            // act
+            var response = await this.httpClient.PostAsJsonAsync<Customer>("/api/customer", this.customerToBeAdded);
 
-            // Act 
-            var response = await client.GetAsync("/api/customer/1");
-            var customerRetrievedFromDb = JsonConvert.DeserializeObject<Customer>(await response.Content.ReadAsStringAsync());
+            // assert
+            Assert.IsTrue(response.IsSuccessStatusCode);
+        }
 
-            // Assert
-            Assert.AreEqual(customerToBeAddedToDb.Id, customerRetrievedFromDb.Id);
+        [Test]
+        public async Task GetCustomerTest()
+        {
+            // arrange 
+            this.customerRepository.AddCustomer(this.customerToBeAdded);
+
+            // act 
+            var response = await this.httpClient.GetAsync("/api/customer/1");
+            var customerRetrieved = JsonConvert.DeserializeObject<Customer>(await response.Content.ReadAsStringAsync());
+
+            // assert
+            Assert.AreEqual(this.customerToBeAdded.Id, customerRetrieved.Id);
+        }
+
+        [Test]
+        public async Task DeleteCustomerTest()
+        {
+            // arrange 
+            this.customerRepository.AddCustomer(this.customerToBeAdded);
+
+            // act
+            var response = await this.httpClient.DeleteAsync("api/customer/1");
+
+            // assert
+            Assert.IsTrue(response.IsSuccessStatusCode);
         }
 
         public void Dispose()
